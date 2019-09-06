@@ -1,0 +1,231 @@
+---
+title: 'Workshop: R for Program Evaluation'
+author: 'Instructor: Maura Lievano'
+output:
+  pdf_document:
+    latex_engine: xelatex
+  html_notebook: default
+  word_document: default
+  html_document:
+    df_print: paged
+    header-includes: \usepackage{graphicx, inputenc, amsmath, caption, xfrac, float,
+      mathabx}
+geometry: margin=2.5cm
+---
+
+# Introduction
+
+Often you will have a dataset to make sense of it, how do we go about it, visually?
+Our data for this exerciseis an open set with socioeconomic indicators from across the world, at the country level, we have this variables:
+
+1. country	
+2. continent	
+3. year	
+4. lifeExp	life expectancy at birth
+5. pop	total population
+6. gdpPercap	per-capita GDP
+
+
+
+# Set up: install and download
+
+Install packages
+(Uncomment to run)
+
+```{r}
+#install.packages("tidyverse", "skimr", "broom", "knitr", "estimatr", "corrplot", gapminder)
+```
+
+
+Load packages into environment
+```{r message=FALSE, warning=FALSE}
+library(gapminder) # Socieconomic indicators by country to demonstrate use of tibbles
+library(knitr) # Supports dynamic report generation in R
+library(skimr) # Tidy summary statistics table 
+library(estimatr) # Fast estimators for Design-Based Inference
+library(corrplot) #  Generation and visualization of a Correlation Matrix
+```
+The chunk options are turned off, if we turn them on, we get messages and warnings.
+
+
+For example, if we call tidyverse:
+```{r}
+library(tidyverse) # Installs packages in the tidyverse
+```
+
+# Inspect your data
+Since our data is in one the packages loaded, let's inspect tour data directly
+```{r}
+gapminder %>% glimpse()
+```
+
+The operator we just used is called the pipe. You will be using this operator %>% a lot to chain functions. Before, people used chain(), but a clever guy (Stefan Bache) included this operator as part of the package Magrittr after his famous painting The Treachery of Images (which by the way it is hosted in the LA County Museum), if you want to check it out. Since it saves a lot of coding, is widely use in the tidyverse.
+
+
+Generate a summary statistics table
+```{r}
+group_by(gapminder) %>%
+ skim()
+```
+
+
+# Visualize data
+Now, answer some questions, with plots.
+What is the distribution of life expectancy across countries?
+```{r message=FALSE, warning=FALSE}
+ggplot(data = gapminder, mapping = aes(x = lifeExp)) +
+  geom_histogram() 
+```
+
+Exercise:
+Can you think of any other way to asnwer this question with a plot?
+
+```{r}
+
+```
+
+
+All plots will have the basic syntax (grammar of graphics) with basic elements: data, x, y, shape.
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = gapminder, mapping = aes(x = lifeExp)) +
+  geom_histogram() + ### NOTICE THE CODE BELOW IS ONLY FOR ADDED LOOK BUT DOES NOT REALLY CHANGE THE INFORMATION CONVEYED
+  theme_minimal() +  theme(axis.text = element_text(size = 11)) + # We changed the font
+  theme(panel.grid.major = element_blank(), # deleted the grids
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + # added labels to axis
+  xlab("Life Expectancy") + 
+  ylab("Count") 
+```
+
+How life expectancy varies across group of countries?
+
+We can make the same plot by continent:
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+ggplot(data = gapminder, mapping = aes(x = lifeExp)) +
+  geom_histogram() +
+  facet_wrap(~ continent) + # Notice that we only added this line to the minimum neccesary to answer the question
+  theme_minimal() +  theme(axis.text = element_text(size = 11)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + 
+  xlab("Life Expectancy") + 
+  ylab("Count") 
+```
+
+Let's look at the data in a boxplot by continent:
+
+```{r}
+ggplot(data = gapminder, mapping = aes(x = continent, y = lifeExp)) +
+  geom_boxplot() +
+  theme_minimal() +  theme(axis.text = element_text(size = 11)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + 
+  xlab("Life Expectancy") + 
+  ylab("Count of") 
+```
+We will get to colors soon. You can highly customize your plot with the R colors: http://www.stat.columbia.edu/~tzheng/files/Rcolor.pdf
+
+
+# Analyze data
+
+For now, let's look at the association of life expectancy and GDP percapita
+
+```{r message=FALSE, warning=FALSE}
+ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) +
+  geom_point() +
+  geom_smooth() + theme_minimal() +  theme(axis.text = element_text(size = 11)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + 
+  xlab("Life Expectancy") + 
+  ylab("Count") 
+```
+
+Notice that the line + geom_smooth(), it only adds the trend, otherwise we have this:
+
+```{r}
+ggplot(data = gapminder, mapping = aes(x = gdpPercap, y = lifeExp)) +
+  geom_point()
+```
+
+To plot the data by continent, as we did with the histogram, we add just an argument:
+```{r message=FALSE, warning=FALSE}
+ggplot(data = gapminder,
+       mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() +
+  geom_smooth() + 
+  theme_minimal() +  theme(axis.text = element_text(size = 11)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + 
+  xlab("Life Expectancy") + 
+  ylab("Count") 
+```
+
+
+
+
+
+
+```{r message=FALSE, warning=FALSE}
+# using facet_wrap()
+ggplot(data = gapminder,
+       mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() +
+  geom_smooth() + 
+  facet_wrap(~ continent) + 
+  theme_minimal() +  theme(axis.text = element_text(size = 11)) +
+  theme(panel.grid.major = element_blank(), 
+        panel.grid.minor = element_blank(),
+        panel.background = element_blank(), 
+        legend.position = 'bottom',
+        legend.spacing.x = unit(.20, 'cm')) +  
+  theme(legend.title=element_blank()) + 
+  xlab("Life Expectancy") + 
+  ylab("Count") 
+  
+```
+
+Exercise: fill in the gap for the arguments.
+```{r}
+ggplot(data = gapminder,mapping = aes(x = , y = , color = )) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(. ~ continent)
+```
+
+
+```{r include=FALSE}
+# using facet_grid()
+ggplot(data = gapminder,mapping = aes(x = gdpPercap, y = lifeExp, color = continent)) +
+  geom_point() +
+  geom_smooth() +
+  facet_grid(. ~ continent)
+```
+
+
+
+
+
+
+
+
+
+

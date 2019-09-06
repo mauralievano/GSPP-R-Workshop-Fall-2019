@@ -1,0 +1,309 @@
+---
+title: 'Workshop: R for Program Evaluation'
+author: 'Instructor: Maura Lievano'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Introduction
+A large body of research explores violence in prisons. Environmental and individual factors have been empirically associated to violent incidents in incarceration settings across the globe. Theft, fights, verbal, physical and sexual abuse have been documented in the interaction among inmates, prison staff and individual with access to prisons, such as visitors and providers of services. In 2016 a representative sample of the prison population in Mexico City was surveyed. Incarcerated adults answered questions about their socioeconomic background, criminal history and victimization in the last 12 months. Our dataset features the following 7 variables:
+
+age: age of respondent at the time of interview
+sex: 1 = male, 0 = female (yeah, I know, is binary!)
+years_edu: age of respondent in years
+v_charges: 0 = non-violent charges,  1 = violent charges
+time_served: 0 = more than 5 years, 1 = less than 5 years
+n_theft: number of incidents of theft experienced in prison in the last year
+n_sex_abuse: number of incidents of sex abuse experienced in prison in the last year
+
+Based on this information we will answer the following questions:
+
+1.  Does gender predict victimization?
+2.  What factors are associated to victimization (theft and sexual violence)?
+3.  Does the likelihood of theft increases with time spent in prison?
+
+# Set Up: Install \& Load
+Install packages
+
+(Uncomment to run)
+```{r}
+#install.packages("tidyverse", "skimr", "broom", "knitr", "estimatr", "corrplot")
+```
+
+Load packages into environment
+```{r message=FALSE, warning=FALSE}
+library(tidyverse) # Installs packages in the tidyverse
+library(knitr) # Supports dynamic report generation in R
+library(skimr) # Tidy summary statistics table 
+library(estimatr) # Fast estimators for Design-Based Inference
+library(corrplot) #  Generation and visualization of a Correlation Matrix
+```
+
+Load data
+```{r message=FALSE, warning=FALSE}
+# load("/Users/mauralievano/Desktop/Workshop/survey.RData")
+survey <- read_csv("survey.csv")
+```
+
+Sometimes, it does not pick the variable type, we can specify the variable type with this code. 
+```{r}
+survey <- read_csv("survey.csv", 
+     col_types = cols(charges = col_factor(levels = c("1", 
+         "0")), male = col_factor(levels = c("1", 
+        "0")), time_served = col_factor(levels = c("1", 
+         "0"))))
+```
+
+You can download your data manually by clicking in the Environment tab the icon "Import Dataset", then locate the file by browsing.
+Environment -> Dataset -> Browse.
+
+Below the syntax to read in files in other formats, for example Excel, Stata or .RData (R format). Check in the notes from session 1 useful syntax for other formats.
+```{r eval=FALSE, include=FALSE}
+read_excel(survey.xlsx)
+read_dta(survey.dta)
+load(survey.RData)
+```
+
+
+# Inspect your data
+
+
+Quick look at your data
+```{r}
+survey %>% glimpse()
+```
+
+
+Generate a summary statistics table
+```{r}
+survey %>% skim()
+```
+
+
+Notice how it separates numeric from factor variables and provides for numeric, the mean, sd, etc., while for the factors provides count by category.
+
+```{r}
+survey %>% skim() -> summary_table
+```
+
+We can look at the summary by group of interest
+
+```{r}
+survey %>% 
+  group_by(male) %>% 
+  skim()
+```
+
+```{r message=FALSE, warning=FALSE}
+survey %>% 
+  group_by(male) %>% 
+  skim() -> summary_by_group
+```
+
+```{r}
+summary_by_group
+```
+
+If you are interested in looking at the relationship of education and likelihood of victimization among men and women, you could generate a summary table with two variables. All variables are included within the function group_by().
+
+
+*EXERCISE
+
+Generate a summary table with  to look at the variables statistics to compare men and women according to the type of charges they face. We want to know if those who are in prison for violent offenses have a higher or lower incidence of victimization. 
+
+ANSWER
+```{r message=FALSE, warning=FALSE}
+survey %>% 
+  group_by(male, charges) %>% 
+  skim() 
+```
+
+Now, let's find out how the incidence of theft and sexual abuse varies according to education
+```{r}
+survey %>% 
+  group_by(edu) %>% 
+  skim() -> edu_table
+edu_table
+```
+This table is long and hard to read. What can we do about it?
+
+This is a display format for our object, but what type of object is it?
+
+```{r}
+class(edu_table)
+```
+```{r}
+colnames(edu_table)
+```
+
+This means we can reshape this table to suit our purposes
+
+# Reshape your data
+The tidyr package, provides four functions to help you change the layout of your data set:
+
+gather(): gather (collapse) columns into rows
+spread(): spread rows into columns
+separate(): separate one column into multiple
+unite(): unite multiple columns into one
+
+We will focus on gather and spread. Into these functions, you generally find three arguments: data, key and value
+Data: the name of your dataset
+key, value: arguments of the functions gather and spread, it indicates the names of key and value columns to create in output Allowed values are:
+variable names
+if you want to select all variables between a and e, use a:e
+if you want to exclude a column name y use -y
+for more options, see: dplyr::select()
+
+```{r}
+head(edu_table)
+```
+
+Let's get rid of the some columns
+
+```{r}
+select(edu_table, edu, variable, stat, formatted)
+```
+
+```{r}
+select(edu_table, variable, stat, formatted) %>%
+  filter(variable == "n_theft") %>% 
+  filter(stat == "mean") 
+```
+
+
+```{r}
+select(edu_table, variable, stat, formatted) %>%
+  filter(variable == "n_theft") %>% 
+  filter(stat == "mean") 
+```
+
+```{r}
+colnames(edu_table)
+```
+
+```{r}
+select(edu_table, edu, variable, stat, formatted) %>%
+  filter(variable == "n_theft") %>% 
+  filter(stat == "mean") -> theft_age
+
+select(edu_table, edu, variable, stat, formatted) %>%
+  filter(variable == "n_sex_abuse") %>% 
+  filter(stat == "mean") ->sex_abuse_age
+
+```
+
+
+
+
+```{r}
+x = spread(theft_age, key = edu, value = formatted)
+x
+```
+```{r}
+spread(sex_abuse_age, edu, formatted)
+
+```
+
+```{r}
+#spread(theft_age, variable, formatted)
+```
+
+
+```{r}
+#rename(incidents_by_age, Education = edu, Variable = variable, Statistic = stat, Value = formatted)
+```
+
+
+
+
+
+# Question 1: Does gender predict victimization?
+Let's start by looking at the raw numbers, the mean for theft and sexual abuse for men and women (recall 0 = female)
+```{r}
+survey %>% group_by(male) %>% 
+  summarize(avg_theft = mean(n_theft, na.rm = TRUE),  ## DO WE NEED NA.RM? not becasue data is clean , but we would if it weren't
+            avg_sex_abuse = mean(n_sex_abuse, na.rm = TRUE))
+```
+
+We observe that women have lower incidence of both types of victimization (violent vs non-violent) and smaller standar deviation than men. Consisten with the mini-histogram from the summary.
+
+
+We can visualize both histograms together:
+```{r message=FALSE, warning=FALSE}
+ggplot(survey, aes(n_theft, group = male, fill = male)) +
+  geom_histogram()
+```
+
+
+```{r message=FALSE, warning=FALSE}
+ggplot(survey, aes(n_sex_abuse, group = male, fill = male)) +
+  geom_histogram() 
+```
+
+
+We can inspect the density plot:
+```{r warning=FALSE}
+ggplot(data = survey, aes(x = n_theft, group = male, fill = male)) + 
+ geom_density(adjust=10, alpha=.5)
+```
+
+```{r warning=FALSE}
+ggplot(data = survey, aes(x = n_sex_abuse, group = male, fill = male)) + 
+ geom_density(adjust=10, alpha=.6)
+```
+Something is going on with the distribution. Could we address the issue with a regression model?
+Are there any violations to the assumptions of the OLS? 
+
+
+# Question 2:  What factors are associated to victimization (theft and sexual violence)?
+
+Before we define a model, let's look at the association of variables
+```{r}
+select(survey, age, edu, n_theft, n_sex_abuse) %>% cor() 
+```
+Number of incidents of victimization by theft has a relatively stronger negative association with age
+Number of incidents of victimization by sexual abuse has a relatively stronger negative association with age, as well
+And there is a positive association between both types of victimization.
+
+These pieces of information are useful for our model. 
+
+Let's plot all our variables together to see the trends by factor variable
+
+```{r}
+ggplot(survey, aes(x = age, y = n_theft, color = male)) +
+  geom_point(size = 1)
+```
+
+
+
+
+
+# Question 3:  Does the likelihood of theft increases with time spent in prison?
+
+Alternatively, you can select specific statistics such as count by category, for factors
+
+```{r}
+survey %>% 
+  group_by(male, time_served, n_theft, n_sex_abuse) %>% 
+  count()
+```
+
+Let's visualize this information
+
+```{r}
+g <- ggplot(data = survey, # add the data
+       aes(x = time_served,  #set x, y coordinates
+           y = n_theft,
+           group = male,  # group by treatment
+           color = male)) +    # color by treatment
+  geom_point(size = 3) + # set size of the dots
+  facet_grid(male~time_served) # create facets by sex and status
+g
+```
+
+
+
+
+
+
