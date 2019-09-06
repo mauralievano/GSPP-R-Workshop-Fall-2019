@@ -4,7 +4,7 @@
 
 
 1. Data for session 2, survey.csv
-2. Notebook for session 2 (Download the version with NO ANSWERS and check your work afterwards)
+2. Notebook for session 2 
 3. Notebook for session 1 (to be uploaded, we are adding sample code)
 4. R markdown cheatsheet
 5. TidyR cheatsheet
